@@ -1,33 +1,17 @@
 from typing import Optional
+import datetime
+import random
+import asyncio
+import logging
 
 import discord
 from discord import app_commands
 import hannah_credentials
 
+logging.basicConfig(filename="hannah.log", level=logging.INFO)
+logger = logging.getLogger('hannah')
+
 MY_GUILD = discord.Object(id=hannah_credentials.peeps['greystone'])  # replace with your guild id
-
-# Define a simple View that gives us a confirmation menu
-class Confirm(discord.ui.View):
-    def __init__(self, me: discord.Member, drk: discord.Member):
-        super().__init__()
-        self.me = me
-        self.value = None
-
-    # When the confirm button is pressed, set the inner value to `True` and
-    # stop the View from listening to more input.
-    # We also send the user an ephemeral message that we're confirming their choice.
-    @discord.ui.button(label='Confirm', style=discord.ButtonStyle.green)
-    async def confirm(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.send_message('Thank you for interacting with this bot, Master Emily')
-        self.value = True
-        self.stop()
-
-    # This one is similar to the confirmation button except sets the inner value to `False`
-    @discord.ui.button(label='Cancel', style=discord.ButtonStyle.grey)
-    async def cancel(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.send_message('Thank you for interacting with this bot, Master Emily')
-        self.value = False
-        self.stop()
 
 class MyClient(discord.Client):
     def __init__(self, *, intents: discord.Intents):
@@ -51,22 +35,18 @@ class MyClient(discord.Client):
 
 
 intents = discord.Intents.default()
+intents.message_content = True
 client = MyClient(intents=intents)
-
-
-@client.event
-async def on_ready():
-    print(f'Logged in as {client.user} (ID: {client.user.id})')
-    print('------')
-
 
 @client.tree.command()
 async def hello(interaction: discord.Interaction):
+    global client, me, drk
+
     # We create the view and assign it to a variable so we can wait for it later.
-    me = await client.fetch_user(hannah_credentials.peeps['me'])
-    drk = await client.fetch_user(hannah_credentials.peeps['drk'])
+    # me = await client.fetch_user(hannah_credentials.peeps['drk'])
+    # drk = await client.fetch_user(hannah_credentials.peeps['drk'])
     channel = interaction.channel
-    view = Confirm(me=me, drk=drk)
+    view = Engage("Button from command text")
     await interaction.response.send_message("Asking Master Emily", ephemeral=True)
     await me.send('Master Emily, would you please hit "confirm" to confirm to Ed that he can write scripts that send messages asking questions?', view=view)
 
@@ -81,82 +61,101 @@ async def hello(interaction: discord.Interaction):
         await drk.send("Master Emily Cancelled")
         print('Cancelled...')
 
-    # """Says hello!"""
-    # await interaction.response.send_message(f'Hi, {interaction.user.mention}')
+class Engage(discord.ui.View):
+    def __init__(self, button_text: str):
+        super().__init__()
+        self.button_text = button_text
+        self.value = None
+        self.confirm.label = button_text
 
-# @client.tree.command()
-# async def hello(interaction: discord.Interaction):
-#     """Says hello!"""
-#     await interaction.response.send_message(f'Hi, {interaction.user.mention}')
+    # When the confirm button is pressed, set the inner value to `True` and
+    # stop the View from listening to more input.
+    # We also send the user an ephemeral message that we're confirming their choice.
+    @discord.ui.button(label='Confirm', style=discord.ButtonStyle.green)
+    async def confirm(self, interaction: discord.Interaction, button: discord.ui.Button):
+        self.value = True
 
+me = None
+drk = None
 
-@client.tree.command()
-@app_commands.describe(
-    first_value='The first value you want to add something to',
-    second_value='The value you want to add to the first value',
-)
-async def add(interaction: discord.Interaction, first_value: int, second_value: int):
-    """Adds two numbers together."""
-    await interaction.response.send_message(f'{first_value} + {second_value} = {first_value + second_value}')
+@client.event
+async def on_ready():
+    global client, me, drk
+    print(f'Logged in as {client.user} (ID: {client.user.id})')
+    print('------')
 
+    me = await client.fetch_user(hannah_credentials.peeps['me'])
+    drk = await client.fetch_user(hannah_credentials.peeps['drk'])
 
-# The rename decorator allows us to change the display of the parameter on Discord.
-# In this example, even though we use `text_to_send` in the code, the client will use `text` instead.
-# Note that other decorators will still refer to it as `text_to_send` in the code.
-@client.tree.command()
-@app_commands.rename(text_to_send='text')
-@app_commands.describe(text_to_send='Text to send in the current channel')
-async def send(interaction: discord.Interaction, text_to_send: str):
-    """Sends the text into the current channel."""
-    await interaction.response.send_message(text_to_send)
+    try:
+        logger.info(f'Beginning daily run')
+        intents = discord.Intents.default()
+        intents.members = True
+        client = discord.Client(intents=intents)
 
+        now = datetime.datetime.now()
+        end_of_day = datetime.datetime(now.year, now.month, now.day) + 1*day
+        seconds_to_wait = random.randint(0, (end_of_day - now).seconds)
+        logger.debug(f"Will send message in {seconds_to_wait} seconds")
 
-# To make an argument optional, you can either give it a supported default argument
-# or you can mark it as Optional from the typing standard library. This example does both.
-@client.tree.command()
-@app_commands.describe(member='The member you want to get the joined date from; defaults to the user who uses the command')
-async def joined(interaction: discord.Interaction, member: Optional[discord.Member] = None):
-    """Says when a member joined."""
-    # If no member is explicitly provided then we use the command user here
-    member = member or interaction.user
+        drk_notification_time = as_string(now + seconds_to_wait*second)
+        drk_start_time = as_string(now + seconds_to_wait*second + 30*minute)
+        day_of_week = now.strftime("%A")
 
-    # The format_dt function formats the date time into a human readable representation in the official client
-    await interaction.response.send_message(f'{member} joined {discord.utils.format_dt(member.joined_at)}')
+        view = Engage("Button text")
+        await drk.send("Notifying Master Emily of today's edging start time.", view=view)
+        await me.send(
+            f"Master Emily, today, {day_of_week}, Ed will be required to begin edging at {drk_start_time}."
+            f"\n\nEd will not know when he will be edging today until his thirty minute advance notice at {drk_notification_time}. He will also be given a five minute and one minute warnings."
+        )
+        await sleep_timedelta(seconds_to_wait*second)
 
+        logger.info(f'Sending five minute warning to Dr. Krohne')
+        await drk.send(f"This is your notification that you will be edging in 30 minutes. You must begin at {drk_start_time}.")
 
-# A Context Menu command is an app command that can be run on a member or on a message by
-# accessing a menu within the client, usually via right clicking.
-# It always takes an interaction as its first parameter and a Member or Message as its second parameter.
+        await sleep_timedelta(20*minute)
+        logger.info(f'Sending ten minute warning to Master Emily')
+        await me.send(f"This is your ten minute reminder that Ed will start edging. He will start at {drk_start_time}.")
 
-# This context menu command only works on members
-@client.tree.context_menu(name='Show Join Date')
-async def show_join_date(interaction: discord.Interaction, member: discord.Member):
-    # The format_dt function formats the date time into a human readable representation in the official client
-    await interaction.response.send_message(f'{member} joined at {discord.utils.format_dt(member.joined_at)}')
+        await sleep_timedelta(5*minute)
+        logger.info(f'Sending message to Dr. Krohne')
+        await drk.send(f"This is your five minute warning to begin edging. You must begin at {drk_start_time}.")
 
+        await sleep_timedelta(4*minute)
+        logger.info(f'Sending message to Dr. Krohne')
+        await drk.send(f"This is your one minute warning to begin edging. You must begin at {drk_start_time}.")
 
-# This context menu command only works on messages
-@client.tree.context_menu(name='Report to Moderators')
-async def report_message(interaction: discord.Interaction, message: discord.Message):
-    # We're sending this response message with ephemeral=True, so only the command executor can see it
-    await interaction.response.send_message(
-        f'Thanks for reporting this message by {message.author.mention} to our moderators.', ephemeral=True
-    )
+        await sleep_timedelta(1*minute)
+        await drk.send(f"You must now be actively edging.")
 
-    # Handle report by sending it into a log channel
-    log_channel = interaction.guild.get_channel(0)  # replace with your channel id
+        for t in range(90,0,-15):
+            await drk.send(f"You have {t} seconds to be close to orgasm.")
+            await sleep_timedelta(15*second)
 
-    embed = discord.Embed(title='Reported Message')
-    if message.content:
-        embed.description = message.content
+        await drk.send(f"You must be close to orgasm.")
+        await sleep_timedelta(10*minute-90*second)
+        await drk.send(f"You may stop, or continue.")
+        await sleep_timedelta(20*minute)
+        await drk.send(f"You must stop, if you have not.")
 
-    embed.set_author(name=message.author.display_name, icon_url=message.author.display_avatar.url)
-    embed.timestamp = message.created_at
+    except Exception as e:
+        logger.exception(e)
+        raise
+    finally:
+        await client.close()
 
-    url_view = discord.ui.View()
-    url_view.add_item(discord.ui.Button(label='Go to Message', style=discord.ButtonStyle.url, url=message.jump_url))
+def as_string(dt):
+    return dt.strftime("**%H:%M**")
 
-    await log_channel.send(embed=embed, view=url_view)
+second = datetime.timedelta(seconds=1)
+minute = datetime.timedelta(minutes=1)
+hour=datetime.timedelta(hours=1)
+day=datetime.timedelta(days=1)
 
+async def sleep_timedelta(td):
+    await asyncio.sleep(td.seconds)
 
 client.run(hannah_credentials.bot_token)
+
+import sys
+sys.exit()

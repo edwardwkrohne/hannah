@@ -3,3 +3,4 @@
 /**/*.log
 /__pycache__/
 hannah_credentials.py
+gretchen_credentials.py

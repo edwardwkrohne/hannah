@@ -4,9 +4,6 @@ import discord
 from discord import app_commands
 
 
-MY_GUILD = discord.Object(id=0)  # replace with your guild id
-
-
 class MyClient(discord.Client):
     def __init__(self, *, intents: discord.Intents):
         super().__init__(intents=intents)
@@ -112,5 +109,6 @@ async def report_message(interaction: discord.Interaction, message: discord.Mess
 
     await log_channel.send(embed=embed, view=url_view)
 
-
-client.run('token')
+import hannah_credentials
+MY_GUILD = discord.Object(id=hannah_credentials.peeps['greystone'])  # replace with your guild id
+client.run(hannah_credentials.bot_token)
