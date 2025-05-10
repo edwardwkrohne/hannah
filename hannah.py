@@ -167,6 +167,7 @@ async def on_ready():
                 try:
                     logger.info(f'Sending thirty minute warning to Dr. Krohne')
                     await drk.send(f"This is your notification that you will be edging in 30 minutes. You must begin at {bold_time(start_time)}.")
+                    play_warning_sound(3)
 
                     await at(start_time - 10*minute)
                     logger.info(f'Sending ten minute warning to Master Emily')
@@ -175,14 +176,17 @@ async def on_ready():
                     await at(start_time - 5*minute)
                     logger.info(f'Sending five minute warning to Dr. Krohne')
                     await drk.send(f"This is your five minute warning to begin edging. You must begin at {bold_time(start_time)}.")
+                    play_warning_sound(1)
 
                     await at(start_time - 1*minute)
                     logger.info(f'Sending one minute warning to Dr. Krohne')
                     await drk.send(f"This is your one minute warning to begin edging. You must begin at {bold_time(start_time)}.")
+                    play_warning_sound(1)
 
                     await at(start_time)
                     logger.info(f'Sending timeout to Dr. Krohne')
                     await drk.send(f"You must now be actively edging.")
+                    play_warning_sound(2)
 
                 except RescheduleException as ex:
                     old_start_time = start_time
@@ -206,6 +210,7 @@ async def on_ready():
                 "Ed is being given no advance notice that his edging is beginning absolutely immediately."
             )
             await drk.send(f"Master Emily has rescheduled your edging practice starting immediately.")
+            play_warning_sound(5)
 
 
         for s in range(0,90,15):
@@ -276,5 +281,47 @@ async def reschedule(interaction: discord.Interaction, choice: app_commands.Choi
             interaction=interaction
         )
     )
+
+def play_warning_sound(times):
+    import pyaudio
+    import wave
+
+    CHUNK = 8192
+
+    p = pyaudio.PyAudio()
+    try:
+        info = p.get_host_api_info_by_index(0)
+        numdevices = info.get('deviceCount')
+
+        devices = {i: p.get_device_info_by_index(i) for i in range(0, numdevices)}
+        lg_device, = [device for i, device in devices.items() if 'LG' in device['name']]
+
+        with wave.open("iwould.wav") as wf:
+            # open stream (2)
+            device_index = lg_device['index']
+            stream = p.open(
+                format=p.get_format_from_width(wf.getsampwidth()),
+                channels=wf.getnchannels(),
+                rate=wf.getframerate(),
+                output=True,
+                output_device_index=device_index
+            )
+            try:
+                # play stream (3)
+                for i in range(times):
+                    data = wf.readframes(CHUNK)
+                    while len(data) > 0:
+                        stream.write(data)
+                        data = wf.readframes(CHUNK)
+
+                    wf.rewind()
+
+            finally:
+                stream.stop_stream()
+                stream.close()
+
+    finally:
+        p.terminate()
+
 
 client.run(credentials.bot_token)
