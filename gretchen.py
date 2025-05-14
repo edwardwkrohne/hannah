@@ -8,6 +8,8 @@ import dataclasses
 import discord
 from discord import app_commands
 
+from requirement_pool import requirements_strings
+
 second = datetime.timedelta(seconds=1)
 minute = datetime.timedelta(minutes=1)
 hour = datetime.timedelta(hours=1)
@@ -128,6 +130,8 @@ async def on_ready():
     print('------')
 
     try:
+        me_requirements_str, drk_requirements_str = requirements_strings()
+
         me = await client.fetch_user(credentials.peeps['me'])
         drk = await client.fetch_user(credentials.peeps['drk'])
 
@@ -147,6 +151,7 @@ async def on_ready():
         await me.send(
             f"Master Emily, today, {day_of_week}, Ed will be required to begin edging at {bold_time(start_time)}."
             f"\n\nEd will not know when he will be edging today until his thirty minute advance notice at {bold_time(start_time-30*minute)}. He will also be given five minute and one minute warnings."
+            f"\n{me_requirements_str}"
         )
 
         try:
@@ -166,7 +171,10 @@ async def on_ready():
 
                 try:
                     logger.info(f'Sending thirty minute warning to Dr. Krohne')
-                    await drk.send(f"This is your notification that you will be edging in 30 minutes. You must begin at {bold_time(start_time)}.")
+                    await drk.send(
+                        f"This is your notification that you will be edging in 30 minutes. You must begin at {bold_time(start_time)}."
+                        f"\n{drk_requirements_str}"
+                    )
                     play_warning_sound(3)
 
                     await at(start_time - 10*minute)
@@ -209,7 +217,10 @@ async def on_ready():
                 "Immediate reschedule!\n"
                 "Ed is being given no advance notice that his edging is beginning absolutely immediately."
             )
-            await drk.send(f"Master Emily has rescheduled your edging practice starting immediately.")
+            await drk.send(
+                f"Master Emily has rescheduled your edging practice starting immediately."
+                f"\n{drk_requirements_str}"
+            )
             play_warning_sound(5)
 
 
