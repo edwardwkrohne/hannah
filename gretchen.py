@@ -15,6 +15,8 @@ minute = datetime.timedelta(minutes=1)
 hour = datetime.timedelta(hours=1)
 day = datetime.timedelta(days=1)
 
+drk_warning_time = 70*minute
+
 for name in "gretchen", "hannah", "ingrid":
     if __file__.endswith(f"{name}.py"):
         credentials = importlib.import_module(f"{name}_credentials")
@@ -43,6 +45,11 @@ start_time = None
 
 def bold_time(dt: datetime.datetime):
     return dt.strftime("**%H:%M**")
+
+def str_timedelta(td: datetime.timedelta, plural=True):
+    num_minutes = int(td.total_seconds()) // 60
+
+    return f"{num_minutes} minute" if not plural or num_minutes == 1 else f"**{num_minutes} minutes**"
 
 @dataclasses.dataclass
 class Rescheduling:
@@ -143,21 +150,22 @@ async def on_ready():
         now = datetime.datetime.now()
         midnight = datetime.datetime(now.year, now.month, now.day) + 1*day
         noon = datetime.datetime(now.year, now.month, now.day) + 12*hour
-        sched = Rescheduling(earliest=max(now, noon)+30*minute, latest=midnight)
+        sched = Rescheduling(earliest=max(now, noon)+drk_warning_time, latest=midnight)
         start_time = sched.when
         day_of_week = now.strftime("%A")
 
         await drk.send(f"Notifying Master Emily of today's edging start time.")
         await me.send(
             f"Master Emily, today, {day_of_week}, Ed will be required to begin edging at {bold_time(start_time)}."
-            f"\n\nEd will not know when he will be edging today until his thirty minute advance notice at {bold_time(start_time-30*minute)}. He will also be given five minute and one minute warnings."
+            f"\n\nEd will not know when he will be edging today until his {str_timedelta(drk_warning_time, plural=False)} advance notice at {bold_time(start_time - drk_warning_time)}."
+            " He will also be given five minute and one minute warnings."
             f"\n{me_requirements_str}"
         )
 
         try:
             while True:
                 try:
-                    await at(start_time - 30*minute)
+                    await at(start_time - drk_warning_time)
 
                 except RescheduleException as ex:
                     logger.debug(f"Requested {ex.schedule.schedule_string}")
@@ -165,26 +173,33 @@ async def on_ready():
 
                     await ex.interaction.response.send_message(
                         f"Requested {ex.schedule.schedule_string}.\n"
-                        f"The new start time will be {bold_time(start_time)} with an advance notice at {bold_time(start_time - 30*minute)}."
+                        f"The new start time will be {bold_time(start_time)} with an advance notice at {bold_time(start_time - drk_warning_time)}."
                     )
                     continue
 
                 try:
-                    logger.info(f'Sending thirty minute warning to Dr. Krohne')
+                    logger.info(f'Sending warning to Dr. Krohne')
                     await drk.send(
-                        f"This is your notification that you will be edging in 30 minutes. You must begin at {bold_time(start_time)}."
+                        f"This is your notification that you will be edging in {str_timedelta(drk_warning_time)}. You must begin at {bold_time(start_time)}."
                         f"\n{drk_requirements_str}"
                     )
                     play_warning_sound(3)
+
+                    if drk_warning_time > 30*minute:
+                        await at(start_time - 30*minute)
+                        logger.info(f'Sending thirty minute warning to Dr. Krohne')
+                        await drk.send(f"This is your thirty minute warning to begin edging. You must begin at {bold_time(start_time)}.")
+                        play_warning_sound(1)
 
                     await at(start_time - 10*minute)
                     logger.info(f'Sending ten minute warning to Master Emily')
                     await me.send(f"This is your ten minute reminder that Ed will start edging. He will start at {bold_time(start_time)}.")
 
-                    await at(start_time - 5*minute)
-                    logger.info(f'Sending five minute warning to Dr. Krohne')
-                    await drk.send(f"This is your five minute warning to begin edging. You must begin at {bold_time(start_time)}.")
-                    play_warning_sound(1)
+                    if drk_warning_time >= 5*minute:
+                        await at(start_time - 5*minute)
+                        logger.info(f'Sending five minute warning to Dr. Krohne')
+                        await drk.send(f"This is your five minute warning to begin edging. You must begin at {bold_time(start_time)}.")
+                        play_warning_sound(1)
 
                     await at(start_time - 1*minute)
                     logger.info(f'Sending one minute warning to Dr. Krohne')
@@ -203,7 +218,7 @@ async def on_ready():
                     await ex.interaction.response.send_message(
                         f"Reschedule for {ex.schedule.schedule_string}\n"
                         f"Because Ed had already been notified of today's edging start time of {bold_time(old_start_time)}, he has been told that you requested a manual reschedule, though not when.\n"
-                        f"The new start time will be {bold_time(start_time)} with an advance notice at {bold_time(start_time - 30 * minute)}."
+                        f"The new start time will be {bold_time(start_time)} with an advance notice at {bold_time(start_time - drk_warning_time)}."
                     )
 
                     await drk.send(f"Master Emily has manually rescheduled today's edging start time. It will no longer be at {bold_time(old_start_time)}.")
@@ -265,7 +280,7 @@ async def reschedule(interaction: discord.Interaction, choice: app_commands.Choi
     elif choice.value == 0:
         now = datetime.datetime.now()
         today = datetime.datetime(now.year, now.month, now.day)
-        earliest = today + 30*minute + math.ceil((now-today).total_seconds()/60)*minute
+        earliest = today + drk_warning_time + math.ceil((now-today).total_seconds()/60)*minute
         latest = earliest
         RescheduleExceptionType = RescheduleException
 
@@ -275,10 +290,10 @@ async def reschedule(interaction: discord.Interaction, choice: app_commands.Choi
         earliest = today + choice.value*hour
         latest = earliest + 119*minute
 
-        earliest = max(earliest, now+30*minute)
+        earliest = max(earliest, now+drk_warning_time)
 
         if earliest > latest:
-            await interaction.response.send_message(f"Impossible reschedule: this time slot will be over before Ed can be given a 30 minute notification.")
+            await interaction.response.send_message(f"Impossible reschedule: this time slot will be over before Ed can be given a {str_timedelta(drk_warning_time, plural=False)} notification.")
             return
 
         RescheduleExceptionType = RescheduleException

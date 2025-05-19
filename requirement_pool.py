@@ -62,7 +62,7 @@ requirement_pool = [
 
     meds_reqmt := TrainingRequirement(
         probability=0.8,
-        description="He will take meds ahead of time if they've arrived.",
+        description="He will take meds ahead of time.",
         tags=["meds"],
     ),
 
