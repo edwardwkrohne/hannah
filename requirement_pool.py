@@ -12,9 +12,21 @@ class TrainingRequirement:
 requirement_pool = [
     TrainingRequirement(
         probability=0.25,
-        description="Today will be a pain day. He will be connected with the clamshells/Coyote while training. "
+        description="He will be connected with the clamshells/Coyote while training. "
                     "He must gradually reach level 50 by the time he is finished.",
-        tags=["pain", "hood"],
+        tags=["pain", "hood", "position"],
+    ),
+
+    gag_rqmt := TrainingRequirement(
+        probability=0.05,
+        description="He will be wearing the painful ball gag.",
+        tags=["pain"],
+    ),
+
+    nipple_clamp_rqmt := TrainingRequirement(
+        probability=0.2,
+        description="He will be wearing the alligator-toothed curtain clamps on his nipples.",
+        tags=["pain", "nipples"],
     ),
 
     TrainingRequirement(
@@ -43,6 +55,23 @@ requirement_pool = [
         tags=["position"],
     ),
 
+    degrade_rqmt := TrainingRequirement(
+        probability=0.0,
+        description="He will be in the most degrading position he can think of.",
+        tags=["position"],
+    ),
+    no_touch_rqmt := TrainingRequirement(
+        probability=0.0,
+        description="He is on no-touch.",
+        tags=["edge"],
+    ),
+
+    TrainingRequirement(
+        probability=0.1,
+        description="He will not be allowed to use any nipple stimulation.",
+        tags=["nipples"]
+    ),
+
     TrainingRequirement(
         probability=0.2,
         description="He will only have 75 seconds to get close to orgasm.",
@@ -60,9 +89,19 @@ requirement_pool = [
         tags=["method"],
     ),
 
-    meds_reqmt := TrainingRequirement(
-        probability=0.8,
-        description="He will take meds ahead of time.",
+    meds_rqmt := TrainingRequirement(
+        probability=0.2,
+        description="He will take one med ahead of time.",
+        tags=["meds"],
+    ),
+    meds_rqmt := TrainingRequirement(
+        probability=0.1,
+        description="He will take two meds ahead of time.",
+        tags=["meds"],
+    ),
+    meds_rqmt := TrainingRequirement(
+        probability=0.02,
+        description="He will take three meds ahead of time.",
         tags=["meds"],
     ),
 
@@ -82,8 +121,8 @@ requirement_pool = [
 def requirements_strings():
     shuffle(requirement_pool)
 
-    chosen_requirements = [meds_reqmt]
-    tags_so_far = set(meds_reqmt.tags)
+    chosen_requirements = []
+    tags_so_far = set()
     probability_modifier = 1.0
     for requirement in requirement_pool:
         if random() <= requirement.probability*probability_modifier and not tags_so_far & set(requirement.tags):
@@ -94,7 +133,7 @@ def requirements_strings():
     if not chosen_requirements:
         me_requirements_str = "  There are no special requirements."
     else:
-        descriptions = [f" * {requirement.description}" for requirement in chosen_requirements]
+        descriptions = [f"* {requirement.description}" for requirement in chosen_requirements]
         me_requirements_str = "\n".join(descriptions)
 
 
