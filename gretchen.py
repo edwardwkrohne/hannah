@@ -186,7 +186,7 @@ class MyClient(discord.Client):
                 await self.me.send(
                     f"Master Emily, today, {day_of_week}, Ed will be required to begin training at {bold_time(start_time)}."
                     f"\n\nEd will not know when he will be training today until his {str_timedelta(drk_warning_time, plural=False)} advance notice at {bold_time(start_time - drk_warning_time)}."
-                    " He will also be given five minute and one minute warnings."
+                    " He will also be given thirty minute, five minute, and one minute warnings."
                     f"\n{me_requirements_str}"
                 )
 

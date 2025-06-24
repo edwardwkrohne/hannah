@@ -1,5 +1,6 @@
 import dataclasses
-from random import random, shuffle
+import numpy as np
+import datetime
 import re
 
 @dataclasses.dataclass
@@ -10,7 +11,7 @@ class TrainingRequirement:
     tags: list[str]
 
 requirement_pool = [
-    TrainingRequirement(
+    coyote_rqmt := TrainingRequirement(
         probability=0.25,
         description="He will be connected with the clamshells/Coyote while training. "
                     "He must gradually reach level 50 by the time he is finished.",
@@ -83,7 +84,7 @@ requirement_pool = [
         tags=["speed"],
     ),
 
-    TrainingRequirement(
+    hitachi_rqmt := TrainingRequirement(
         probability=0.5,
         description="He will use the Hitachi.",
         tags=["method"],
@@ -119,13 +120,15 @@ requirement_pool = [
 ]
 
 def requirements_strings():
-    shuffle(requirement_pool)
+    today = (datetime.datetime.now() - datetime.datetime(1970,1,1)).days
+    rng = np.random.default_rng(today)
+    rng.shuffle(requirement_pool)
 
     chosen_requirements = []
     tags_so_far = set()
     probability_modifier = 1.0
     for requirement in requirement_pool:
-        if random() <= requirement.probability*probability_modifier and not tags_so_far & set(requirement.tags):
+        if rng.random() <= requirement.probability*probability_modifier and not tags_so_far & set(requirement.tags):
             chosen_requirements.append(requirement)
             probability_modifier *= 0.7
             tags_so_far = tags_so_far | set(requirement.tags)
